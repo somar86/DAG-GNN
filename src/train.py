@@ -144,7 +144,7 @@ if args.save_folder:
     exp_counter = 0
     now = datetime.datetime.now()
     timestamp = now.isoformat()
-    save_folder = '{}/exp{}/'.format(args.save_folder, timestamp)
+    save_folder = '{}/exp{}/'.format(args.save_folder, timestamp[:-7].split(":"))
     # safe_name = save_folder.text.replace('/', '_')
     os.makedirs(save_folder)
     meta_file = os.path.join(save_folder, 'metadata.pkl')
@@ -380,29 +380,31 @@ def train(epoch, best_val_loss, ground_truth_G, lambda_A, c_A, optimizer):
         kl_train.append(loss_kl.item())
         shd_trian.append(shd)
 
-    print(h_A.item())
+    # print('h(A^k) = {}'.format(h_A.item()))
     nll_val = []
     acc_val = []
     kl_val = []
     mse_val = []
 
     print('Epoch: {:04d}'.format(epoch),
-          'nll_train: {:.10f}'.format(np.mean(nll_train)),
-          'kl_train: {:.10f}'.format(np.mean(kl_train)),
-          'ELBO_loss: {:.10f}'.format(np.mean(kl_train)  + np.mean(nll_train)),
-          'mse_train: {:.10f}'.format(np.mean(mse_train)),
-          'shd_trian: {:.10f}'.format(np.mean(shd_trian)),
+          'h(A^k): {:04e}'.format(h_A.item()),
+          'nll_train: {:.04e}'.format(np.mean(nll_train)),
+          'kl_train: {:.04e}'.format(np.mean(kl_train)),
+          'ELBO_loss: {:.04e}'.format(np.mean(kl_train)  + np.mean(nll_train)),
+          'mse_train: {:.04e}'.format(np.mean(mse_train)),
+          'shd_train: {:.04e}'.format(np.mean(shd_trian)),
           'time: {:.4f}s'.format(time.time() - t))
-    if args.save_folder and np.mean(nll_val) < best_val_loss:
+    if 1 or np.mean(nll_val) < best_val_loss:#args.save_folder and
         torch.save(encoder.state_dict(), encoder_file)
         torch.save(decoder.state_dict(), decoder_file)
-        print('Best model so far, saving...')
+        # print('Best model so far, saving...')
         print('Epoch: {:04d}'.format(epoch),
-              'nll_train: {:.10f}'.format(np.mean(nll_train)),
-              'kl_train: {:.10f}'.format(np.mean(kl_train)),
-              'ELBO_loss: {:.10f}'.format(np.mean(kl_train)  + np.mean(nll_train)),
-              'mse_train: {:.10f}'.format(np.mean(mse_train)),
-              'shd_trian: {:.10f}'.format(np.mean(shd_trian)),
+                'h(A^k): {:04e}'.format(h_A.item()),
+                'nll_train: {:.04e}'.format(np.mean(nll_train)),
+              'kl_train: {:.04e}'.format(np.mean(kl_train)),
+              'ELBO_loss: {:.04e}'.format(np.mean(kl_train)  + np.mean(nll_train)),
+              'mse_train: {:.04e}'.format(np.mean(mse_train)),
+              'shd_train: {:.04e}'.format(np.mean(shd_trian)),
               'time: {:.4f}s'.format(time.time() - t), file=log)
         log.flush()
 
@@ -435,6 +437,9 @@ h_A_old = np.inf
 try:
     for step_k in range(k_max_iter):
         while c_A < 1e+20:
+            print('eig(A): {:.04e} c_A: {:.04e}'.format(lambda_A ,c_A))
+            print('eig(A): {:.04e} c_A: {:.04e}'.format(lambda_A, c_A), file=log)
+            log.flush()
             for epoch in range(args.epochs):
                 ELBO_loss, NLL_loss, MSE_loss, graph, origin_A = train(epoch, best_ELBO_loss, ground_truth_G, lambda_A, c_A, optimizer)
                 if ELBO_loss < best_ELBO_loss:
